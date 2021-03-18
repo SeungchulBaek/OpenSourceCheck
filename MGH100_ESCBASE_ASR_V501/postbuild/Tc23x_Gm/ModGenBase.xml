@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- edited with XMLSpy v2013 sp1 (x64) (http://www.altova.com) by Kyoung-Sik Kim (MANDO Corporation) -->
+<GmProject xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Name="3 Partitions, each with 1 cal" xsi:noNamespaceSchemaLocation="GmHeader.xsd">
+	<HeaderVersion>1.00</HeaderVersion>
+	<SignedHeaderInfo>
+		<!-- SignerInfoDummyKey.hex uses Vector Demo/Dummy Key and Dummy Subject name "Engine" -->
+		<image>.\KEY\SignerInfoDummyKey.hex</image>
+		<!-- ECU ID 0 is a module meant for all ECUs (no restriction to single unique) -->
+		<EcuId>0</EcuId>
+		<!-- Demo/Dummy Ecu name -->
+		<EcuName>EBCM_PGM</EcuName>
+	</SignedHeaderInfo>
+	<AppHeaderInfo name="tc23x_Gm_App">
+		<HeaderAddress>0xA000C000</HeaderAddress>
+		<!--  Do not use leading zeros here  -->
+		<ModuleId>1</ModuleId>
+		<!-- Bootloader Compatibility ID, always 0x8000 for first release -->
+		<BCID>0x200C</BCID>
+		<!-- Not before ID, always starts with 0 for first release. Do not use leading zeros here  -->
+		<NBID>1</NBID>
+		<!-- Design Level suffix, always starts with AA for first release -->
+		<DLS>AB</DLS>
+		<!-- Demo/Dummy part number, can be started with, replace with required number at some point -->
+		<PartNumber>0x0191728C</PartNumber>
+		<!-- Optional Ascii part number - Remove comment and edit if desired to use -->
+		<!-- <AsciiPartNumber>11111111</AsciiPartNumber> -->
+		<!-- Number of Partitions == 0 if no cal modules are used. Need to be consistent to defined "Partition" element number that follows -->
+		<Partitions NumberOfPartitions="3">
+			<!-- Number of Regions larger or equal 1, need to be consistent to defined "Region" element number that follows -->
+			<Partition NumberOfRegions="1">
+				<!-- Regions have to be in order (start with lowest address)! -->
+				<Region start="0xA0000000" length="0x4000"/>
+				<CalFiles NumberOfCalFiles="1">
+					<Image BaseAddress="0xA0000000">tc23x_Gm_Cal1_plain.gbf</Image>
+				</CalFiles>
+			</Partition>
+			<!-- Number of Regions larger or equal 1, need to be consistent to defined "Region" element number that follows -->
+			<Partition NumberOfRegions="1">
+				<!-- Regions have to be in order (start with lowest address)! -->
+				<Region start="0xA0004000" length="0x4000"/>
+				<CalFiles NumberOfCalFiles="1">
+					<Image BaseAddress="0xA0004000">tc23x_Gm_Cal2_plain.gbf</Image>
+				</CalFiles>
+			</Partition>
+			<!-- Number of Regions larger or equal 1, need to be consistent to defined "Region" element number that follows -->
+			<Partition NumberOfRegions="1">
+				<!-- Regions have to be in order (start with lowest address)! -->
+				<Region start="0xA0008000" length="0x4000"/>
+				<CalFiles NumberOfCalFiles="1">
+					<Image BaseAddress="0xA0008000">tc23x_Gm_Cal3_plain.gbf</Image>
+				</CalFiles>
+			</Partition>
+		</Partitions>
+	</AppHeaderInfo>
+	<CalHeaderInfo Name="tc23x_Gm_Cal1">
+		<ModuleId>2</ModuleId>
+		<!-- Calibration Compatibility ID, always 0x8000 for first release -->
+		<CCID>0x200C</CCID>
+		<!-- Design Level suffix, always starts with AA for first release -->
+		<DLS>AA</DLS>
+		<!-- Demo/Dummy part number, can be started with, replace with required number at some point -->
+		<PartNumber>0x0191789D</PartNumber>
+		<!-- Optional Ascii part number - Remove comment and edit if desired to use -->
+		<!-- <AsciiPartNumber>0154CBF7</AsciiPartNumber> -->
+	</CalHeaderInfo>
+	<CalHeaderInfo Name="tc23x_Gm_Cal2">
+		<ModuleId>3</ModuleId>
+		<!-- Calibration Compatibility ID, always 0x8000 for first release -->
+		<CCID>0x200C</CCID>
+		<!-- Design Level suffix, always starts with AA for first release -->
+		<DLS>AB</DLS>
+		<!-- Demo/Dummy part number, can be started with, replace with required number at some point -->
+		<PartNumber>0x01912B35</PartNumber>
+		<!-- Optional Ascii part number - Remove comment and edit if desired to use -->
+		<!-- <AsciiPartNumber>0154CBF7</AsciiPartNumber> -->
+	</CalHeaderInfo>
+	<CalHeaderInfo Name="tc23x_Gm_Cal3">
+		<ModuleId>4</ModuleId>
+		<!-- Calibration Compatibility ID, always 0x8000 for first release -->
+		<CCID>0x200C</CCID>
+		<!-- Design Level suffix, always starts with AA for first release -->
+		<DLS>AB</DLS>
+		<!-- Demo/Dummy part number, can be started with, replace with required number at some point -->
+		<PartNumber>0x01918D4F</PartNumber>
+		<!-- Optional Ascii part number - Remove comment and edit if desired to use -->
+		<!-- <AsciiPartNumber>44444444</AsciiPartNumber> -->
+	</CalHeaderInfo>
+</GmProject>

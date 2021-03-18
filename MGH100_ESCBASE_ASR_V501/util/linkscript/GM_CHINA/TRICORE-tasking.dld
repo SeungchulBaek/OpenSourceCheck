@@ -1,0 +1,1408 @@
+// TRICORE-tasking.ldscript
+//
+// Minimal TC233 CPU description for Tasking linker.
+//
+// This file contains a stripped-down CPU description for the Tasking
+// linker. It was created using a trial-and-error
+// method, starting with an empty file and adding the only the portions
+// that the linker complained about.
+//
+// (c) Elektrobit Automotive GmbH
+//
+// $Id$
+
+#define APP_RESET_OFFSET        0x1000
+#define APP_HEADER_SIZE         0x160   // 352B
+#define APP_START 0x8000C100 // 0x80080000
+//#define APP_SIZE  0x00180000  //1600 -> 1472KB -> 1536KB
+#define APP_SIZE  (0x00180000 - 0x100) //1600 -> 1472KB -> 1536KB
+#define APP_END 0x801FFFC0
+#define APP_PRESENT_PATTERN_SIZE 0x20 // 32B
+#define CAL_PRESENT_PATTERN_SIZE 0x20 // 32B
+
+#define VEHICLEMANUFACTURERECUSOFTWAREVERSIONNUMBER     0x801C2000
+#define SYSTEMSUPPLIERECUHARDWAREVERSIONNUMBER          0x801C2010
+#define GEELYSPAREPARTNUMBER                            0x801C2020
+
+architecture TC
+{
+	endianness
+	{
+		little;
+	}
+
+	space linear
+	{
+		id = 1;
+		mau = 8;
+
+		map (src_offset=0x00000000, dest_offset=0x00000000, size=4G, dest=bus:fpi_bus);
+
+		copytable (align = 1 << 2, copy_unit = 1, dest = linear);
+	}
+
+	bus fpi_bus
+	{
+		mau = 8;
+		width = 32;
+	}
+}
+
+architecture TC1V1.6.X extends TC
+{
+}
+
+processor spe
+{
+	derivative = tc233;
+}
+
+derivative tc233
+{
+	core tc
+	{
+		architecture = TC1V1.6.X;
+	}
+
+	bus fpi_bus
+	{
+		mau = 8;
+		width = 32;
+		map (dest=bus:tc:fpi_bus, dest_offset=0, size=4G);
+	}
+}
+
+// ----------------------------
+// Memory layout 
+// ----------------------------
+//
+// The internal RAM (184 KB DSPR; it's a TC1.6E core) is divided between
+// Code, data & CSAs Default allocation:
+//   152KB (0xd0000000 - 0xd0025FFF) --> data
+//   32KB (0xd0026000 - 0xd002DFFF) --> CSA
+// To change this allocation, simply edit the 'int_ram' mapping and the
+// CSA begin and end markers in this file.
+
+// Flash ROM at 0x80000000 (2MB), PMU0, cached
+/*
+-----------------------------------------0x80000000
+cal1 (16KB)
+-----------------------------------------0x80004000
+cal2 (16KB)
+-----------------------------------------0x80008000
+cal3 (16KB)
+-----------------------------------------0x8000C000
+user_appl1 (48KB)
+-----------------------------------------0x80018000
+HSM (16KB)
+-----------------------------------------0x8001C000
+user_boot (80KB)
+-----------------------------------------0x80030000
+user_appl2 (192KB)
+-----------------------------------------0x80060000
+HSM (128KB)
+-----------------------------------------0x80080000
+user_appl3 (1280KB)
+-----------------------------------------0x801C0000
+inttab_trap (8KB)
+user_common (4KB)
+user_appl4 (244KB)
+-----------------------------------------0x80200000
+*/
+memory cal1
+{
+    mau = 8;
+    type = rom;
+    size = 16k;    
+    map (dest=bus:spe:fpi_bus, dest_offset=0x80000100, size=16k-0x100);
+}
+memory cal2
+{
+    mau = 8;
+    type = rom;
+    size = 16k;    
+    map (dest=bus:spe:fpi_bus, dest_offset=0x80004100, size=16k-0x100);
+}
+memory cal3
+{
+    mau = 8;
+    type = rom;
+    size = 16k;    
+    map (dest=bus:spe:fpi_bus, dest_offset=0x80008100, size=16k-0x100);
+}
+memory user_appl1
+{
+    mau = 8;
+    type = rom;
+    size = 48k;    
+    map (dest=bus:spe:fpi_bus, dest_offset=0x8000C000, size=48k, priority=7);
+}
+memory hsm_code0
+{
+    mau = 8;
+    type = reserved rom;
+    size = 16k;
+    map (dest=bus:spe:fpi_bus, dest_offset=0x80018000, size=16k);
+}
+memory user_boot
+{
+    mau = 8;
+    type = reserved rom;
+    size = 80k;
+    map (dest=bus:spe:fpi_bus, dest_offset=0x8001C000, size=80k);
+}
+memory user_appl2
+{
+    mau = 8;
+    type = rom;
+    size = 192k;    
+    map (dest=bus:spe:fpi_bus, dest_offset=0x80030000, size=192k);
+}
+memory hsm_code1
+{
+    mau = 8;
+    type = reserved rom;
+    size = 128k;
+    map (dest=bus:spe:fpi_bus, dest_offset=0x80060000, size=128k);
+}
+memory user_appl3
+{
+    mau = 8;
+    type = rom;
+    size = 1280k;    
+    map (dest=bus:spe:fpi_bus, dest_offset=0x80080000, size=1280k);
+}
+memory inttab_trap
+{
+    mau = 8;
+    type = rom;
+    size = 8k;
+    map (dest=bus:spe:fpi_bus, dest_offset=0x801C0000, size=8k);
+}
+memory user_common
+{
+    mau = 8;
+    type = rom;
+    size = 4k;
+    map (dest=bus:spe:fpi_bus, dest_offset=0x801C2000, size=4k);
+}
+memory user_appl4
+{
+    mau = 8;
+    type = rom;
+    size = 244k-APP_PRESENT_PATTERN_SIZE;
+    map (dest=bus:spe:fpi_bus, dest_offset=0x801C3000, size=(244k-APP_PRESENT_PATTERN_SIZE));
+}
+/*
+memory user_boot
+{
+    mau = 8;
+    type = reserved rom;
+    size = 80k;
+    map (dest=bus:spe:fpi_bus, dest_offset=0x80000000, size=64k);
+}
+#if 1
+memory reserved_cal
+{
+    mau = 8;
+    type = rom;
+    size = 16k;
+    //map (dest=bus:spe:fpi_bus, dest_offset=0x80010000, size=16k);
+    map (dest=bus:spe:fpi_bus, dest_offset=0x80010100, size=16k-0x100);
+}
+#endif
+#if 0
+memory itpms_cal
+{
+    mau = 8;
+    type = rom;
+    size = 16k;
+    map (dest=bus:spe:fpi_bus, dest_offset=0x80010000, size=16k);
+}
+#endif
+memory pbc_cal
+{
+    mau = 8;
+    type = rom;
+    size = 16k;
+    map (dest=bus:spe:fpi_bus, dest_offset=0x80014000, size=16k);
+}
+memory hsm_code0
+{
+    mau = 8;
+    type = reserved rom;
+    size = 16k;
+    map (dest=bus:spe:fpi_bus, dest_offset=0x80018000, size=16k);
+}
+memory esc_cal1
+{
+    mau = 8;
+    type = rom;
+    size = 272k;
+    //map (dest=bus:spe:fpi_bus, dest_offset=0x8001C000, size=272k);
+    //map (dest=bus:spe:fpi_bus, dest_offset=0x8001C100, size=272k-0x100);
+    map (dest=bus:spe:fpi_bus, dest_offset=0x8001C010, size=272k-0x10);
+}
+memory hsm_code1
+{
+    mau = 8;
+    type = reserved rom;
+    size = 128k;
+    map (dest=bus:spe:fpi_bus, dest_offset=0x80060000, size=128k);
+}
+#if 0
+memory esc_cal2
+{
+    mau = 8;
+    type = rom;
+    size = 64k-CAL_PRESENT_PATTERN_SIZE;
+    map (dest=bus:spe:fpi_bus, dest_offset=0x80080000, size=(64k-CAL_PRESENT_PATTERN_SIZE));
+}
+#endif
+memory user_appl
+{
+    mau = 8;
+    type = rom;
+    size = 1216k+64k;
+    priority = 2;
+    //map (dest=bus:spe:fpi_bus, dest_offset=0x80090000, size=1216k);
+    map (dest=bus:spe:fpi_bus, dest_offset=0x80080000, size=1216k+64k);
+}
+memory inttab_trap
+{
+    mau = 8;
+    type = rom;
+    size = 8k;
+    map (dest=bus:spe:fpi_bus, dest_offset=0x801C0000, size=8k);
+}
+memory user_common
+{
+    mau = 8;
+    type = rom;
+    size = 4k;
+    map (dest=bus:spe:fpi_bus, dest_offset=0x801C2000, size=4k);
+}
+memory user_appl1
+{
+    mau = 8;
+    type = rom;
+    size = 244k-APP_PRESENT_PATTERN_SIZE;
+    map (dest=bus:spe:fpi_bus, dest_offset=0x801C3000, size=(244k-APP_PRESENT_PATTERN_SIZE));
+}
+*/
+/*
+memory int_rom_0
+{
+	mau = 8;
+	size = 524288;
+	type = rom;
+	map (dest=bus:spe:fpi_bus, dest_offset=0x80000000, size=524288);
+}
+
+memory int_rom_1
+{
+	mau = 8;
+	size = 1572864;
+	type = rom;
+	map (dest=bus:spe:fpi_bus, dest_offset=0x80080000, size=1572864);
+}
+*/
+
+// The size of the internal RAM segment is set to 152k here. The remaining
+// 32k is reserved for CSAs. If you need more data memory or more CSAs, you
+// can increase one at the expense of the other by changing the size of the
+// int_ram region and the BEGIN address of the CSA region (below)
+memory int_ram
+{
+	mau = 8;
+	size = 177k;
+	type = ram;
+	map (dest=bus:spe:fpi_bus, dest_offset=0x70000000, size=177k); 	//Default : map (dest=bus:spe:fpi_bus, dest_offset=0xd0000000, size=152k);
+}
+
+memory int_ram_pspr
+{
+	mau = 8;
+	size = 8k;
+	type = ram;
+	map (dest=bus:spe:fpi_bus, dest_offset=0x70100000, size=8k); 	// Mando added.
+}
+
+// reserved sections
+section_setup spe:tc:linear
+{
+    // According to Tasking compiler user guide the reserved keyword is used, like
+    // reserved start_address .. end_address;
+    // For compiler v4.x we had to add +1 to end_address cause the linker tries
+    // to link to adress 0x8001bfff.
+	//reserved 0x80014000 .. 0x80018000;  // S5 Tuning Protection
+    reserved 0x80018000 .. 0x8001c000;  // S6 HSM
+    reserved 0x8001c000 .. 0x80020000;  // user_boot
+    reserved 0x80020000 .. 0x80028000;  // user_boot    
+    reserved 0x80028000 .. 0x80030000;  // user_boot
+    reserved 0x80060000 .. 0x80070000;  // S16 HSM
+    reserved 0x80070000 .. 0x80080000;  // S17 HSM
+}
+
+// Where the CSA memory is located:
+// OS_CSAMEMORY_BEGIN is the base of the CSA block
+// OS_CSAMEMORY_END is the limit - i.e. the first address that won't be
+// used as a CSA
+//
+// These must be aligned on 64-byte boundaries (lower 6 bits all zero),
+// otherwise the initialisation function will round them and you might end
+// up with fewer CSAs than you expect.
+section_layout spe:tc:linear
+{
+  "MK_RSA_MK_Csa"  := 0xd002C400;
+  "MK_RLA_MK_Csa"  := 0xd002E000;
+}
+
+section_layout spe:tc:linear
+{
+    group (ordered, contiguous, align = 4, run_addr=VEHICLEMANUFACTURERECUSOFTWAREVERSIONNUMBER)
+    {
+        select ".rodata.version_par.VEHICLE_ECU_SW_VERSION";
+    }
+    group (ordered, contiguous, align = 4, run_addr=SYSTEMSUPPLIERECUHARDWAREVERSIONNUMBER)
+    {
+        select ".rodata.version_par.SYSTEM_ECU_HW_VERSION";
+    }
+    group (ordered, contiguous, align = 4, run_addr=GEELYSPAREPARTNUMBER)
+    {
+        select ".rodata.version_par.SPARE_PART_NO";
+    }
+}
+
+section_layout spe:tc:linear
+{
+#if 0
+    group (ordered, run_addr=0x70001000, contiguous)
+    {
+        select ".bss.VX1000_AppDriver_TriCore.gVX1000";
+    }
+#endif
+}
+
+// Sections necessary for the Infineon Fls module
+// See chapter 2.1.3 in Fls User Manual PDF file.
+section_layout spe:tc:linear
+{
+    group FLS_AC_ERASE_SOURCE (ordered,contiguous,run_addr = mem:user_appl1, align=8)
+    {
+        select ".text.FLS_AC_ERASE_SOURCE";
+    }
+}
+
+section_layout spe:tc:linear
+{
+    group FLS_AC_WRITE_SOURCE (ordered,contiguous,run_addr = mem:user_appl1, align=8)
+    {
+        select ".text.FLS_AC_WRITE_SOURCE";
+    }
+}
+
+section_layout spe:tc:linear
+{
+    group FLS_AC_WRITE (ordered, run_addr = mem:user_appl1, align=8)
+    {
+        reserved "FLS_AC_WRITE" (alloc_allowed = absolute, size = 200);
+    }
+}
+
+section_layout spe:tc:linear
+{
+    group FLS_AC_ERASE (ordered, run_addr = mem:user_appl1, align=8)
+    {
+        reserved "FLS_AC_ERASE" (alloc_allowed = absolute, size = 200);
+    }
+}
+
+ /* Added for copytable implementation of PmuEccEdcTst, PFlashMonTst 
+and SlFlsErrPtrn functions that are executed from RAM*/
+section_layout spe:tc:linear
+{
+
+  "LOC_START_PmuEccEdcTst_tvt_RAM_RUNCODE" = "_lc_gb_PMUECCEDCTST_TVT_RUNCODE";
+  "LOC_END_PmuEccEdcTst_tvt_RAM_RUNCODE" = "_lc_ge_PMUECCEDCTST_TVT_RUNCODE";
+
+	//point to the start and end of the section in SRAM that holds the helper functions copied from PFLASH.
+  "LOC_START_PflashMon_EccEdc_RAM_RUNCODE" = "_lc_gb_PFLASH_MON_ECCEDC_RUNCODE";
+  "LOC_END_PflashMon_EccEdc_RAM_RUNCODE" = "_lc_ge_PFLASH_MON_ECCEDC_RUNCODE";
+
+  group PMUECCEDCTST_TVT_RUNCODE ( ordered, run_addr = mem:int_ram_pspr[0x100], align=256 )
+  {
+    section "PMUECCEDCTST_TVT_RAMCODE" (blocksize=4, attributes=rwx)
+    {
+       select ".text.PMUECCEDCTST_TVT_RAMCODE*";
+    }
+  }
+  
+  group PFLASH_MON_ECCEDC_RUNCODE ( ordered, run_addr = mem:int_ram_pspr[0x200], align=4 )
+  {
+    section "PFLASH_MON_ECCEDC_RAMCODE" (blocksize=4, attributes=rwx)
+    {
+       select ".text.PFLASH_MON_ECCEDC_RAMCODE*";
+    }
+  }
+}
+    
+section_layout spe:tc:linear
+{
+  "LOC_START_PF0_PATTERNS" = "_lc_gb_PATTERN_PF0";
+  
+  /* PFLASH0 area for PMU ECC/EDC test patterns: */
+  group PATTERN_PF0 (align=32, ordered, run_addr=mem:user_appl1)
+  {
+    section "PFLASH0_PATTERNS" (size=896,attributes = r, fill = 0x00)
+    {
+      select ".rodata.MTL_PMU_ECC_EDC_TST_PF0";
+    }
+  }
+ 
+}
+
+section_layout spe:tc:linear
+{
+
+	//used to point to the start and end of the trap vector table code in PFLASH.
+  "LOC_START_PmuEccEdcTst_tvt_PFLASHCODE" = "_lc_gb_PMUECCEDCTST_TVT_PFLASHCODE";
+  "LOC_END_PmuEccEdcTst_tvt_PFLASHCODE" = "_lc_ge_PMUECCEDCTST_TVT_PFLASHCODE";
+
+	//used to point to the start and end address of the section in PFLASH that holds the functions that are executed from SRAM.
+  "LOC_START_PflashMon_EccEdc_PFLASHCODE" = "_lc_gb_PFLASH_MON_ECCEDC_PFLASHCODE";
+  "LOC_END_PflashMon_EccEdc_PFLASHCODE" = "_lc_ge_PFLASH_MON_ECCEDC_PFLASHCODE";
+
+  select ".text.libc.reset";
+  group PMUECCEDCTST_TVT_PFLASHCODE ( ordered, load_addr = mem:user_appl1, align=256 )
+  {
+    section "PMUECCEDCTST_TVT_RAMCODE" (blocksize=4, attributes=r, fill=0x00)
+    {
+       select "\[.text.PMUECCEDCTST_TVT_RAMCODE*\]";
+    }
+  }  
+  group PFLASH_MON_ECCEDC_PFLASHCODE ( ordered, load_addr = mem:user_appl1, align=4 )
+  {
+    section "PFLASH_MON_ECCEDC_RAMCODE" (blocksize=4, attributes=r, fill=0x00)
+    {
+       select "\[.text.PFLASH_MON_ECCEDC_RAMCODE*\]";
+    }
+  }  
+}
+
+/* Added for copytable implementation of PmuEccEdcTst, PFlashMonTst 
+and SlFlsErrPtrn functions that are executed from RAM*/
+section_setup spe:tc:linear
+{
+  modify input (space = spe:tc:linear, copy)
+  {
+    select ".text.PMUECCEDCTST_TVT_RAMCODE*";
+    select ".text.PFLASH_MON_ECCEDC_RAMCODE*";
+  }
+}
+// -----------------------------------------------------------------------------
+// Calibration Section
+// -----------------------------------------------------------------------------
+#include "pbc_cal.lsl"
+//#include "ivss_cal.lsl"
+//#include "itpms_cal.lsl"
+#include "esc_cal.lsl"
+//#include "reserved_cal.lsl"
+#include "diag_cal_control.lsl"
+#include "diag_cal_electric.lsl"
+#include "fct_cal.lsl"
+// -----------------------------------------------------------------------------
+// Linker script for the TRICORE system.
+//
+// GENERATED FILE: DO NOT EDIT
+// Generated by genld-TRICORE-tasking-Mk.pl on 2016-11-29 15:52
+//
+
+section_layout spe:tc:linear
+{
+  group applvect (ordered, run_addr = 0x80080300) select ".rodata.APPLVECT";
+  group __AREA_text_MK (contiguous, ordered, run_addr = mem:user_appl3[APP_RESET_OFFSET])
+  {
+    // Vector tables at start of ROM
+    group text.vectors (contiguous, ordered)
+    {
+      //select "MK_bootword";
+      //select "MK_inttable";
+      select "MK_reset";
+	  /* Mando added */
+	  select "MK_exctable";
+	  select ".text.Ach_Output_Process.Ach_ValveInit*";
+    }
+  }
+
+  group __AREA_text_T1 (contiguous, ordered, run_addr = mem:user_appl3, nocopy, attributes=rx)
+  { 
+    select ".text.T1_codeDMSCore0";
+    select ".text.T1_codeDMSCore1";
+  } 
+  
+  /* Mando added PSPR area */
+  group AREA_MK_Rom_PSPR (contiguous, ordered, load_addr = mem:user_appl3, align=4)
+  {
+  select ".text.Ach_Output_Process.Ach_AdcSelectSetFunc_CS";
+  select ".text.Ach_Output_Process.Ach_CRC5Gen";
+  select ".text.Ach_Output_Process.Ach_Process";
+  select ".text.Ach_Output_Process.Ach_SetReadSpiData_CS";
+  select ".text.Ach_Output_Process.Ach_SetWriteSpiDataValveNc_SR";
+  select ".text.Ach_Output_Process.Ach_SetWriteSpiDataValveNo_SR";
+//select ".text.Ach_Output_Process.Ach_SetWriteSpiDataValveTcEsv_SR";
+  select ".text.Ach_Output_Process.Ach_ShlsDriveSetFunc_CS";
+  select ".text.Ach_Output_Process.Ach_VsoDriveSetFunc_CS";
+  select ".text.Ach_Output_Process.Ach_WachdogAnswerSetFunc_CS";
+  select ".text.Ach_Output_Process.Ach_WachdogSeedRequestFunc_CS";
+  select ".text.Ach_Output_Process.Ach_WldDriveSetFunc_CS";
+  select ".text.CRYRAMCODE*";
+  select ".text.TSMem.*";
+/*
+  select ".text.LatDynsCoorr_s16Inter3Point.LatDynsCoorr_s16Inter3Point";
+  select ".text.LatDynsCoorr_s16Inter4Point.LatDynsCoorr_s16Inter4Point";
+  select ".text.LatDynsCoorr_sCalLpf1stOrder.LatDynsCoorr_sCalLpf1stOrder";
+  select ".text.Wspc_Etcs_mul_s32_s32_s32_sat.mul_s32_s32_s32_sat";
+  select ".text.Wspc_Etcs_s16Inter3Point.LCETCS_s16Inter3Point";
+  select ".text.Wspc_Btcs_math.WSPC_s16Inter5Point";
+  select ".text.Wspc_Etcs_s16Inter5Point.LCETCS_s16Inter5Point";
+*/
+  }
+  group AREA_MK_Ram_PSPR (contiguous, ordered, run_addr = mem:int_ram_pspr, align=4, copy)
+  {
+  select ".text.Ach_Output_Process.Ach_AdcSelectSetFunc_CS";
+  select ".text.Ach_Output_Process.Ach_CRC5Gen";
+  select ".text.Ach_Output_Process.Ach_Process";
+  select ".text.Ach_Output_Process.Ach_SetReadSpiData_CS";
+  select ".text.Ach_Output_Process.Ach_SetWriteSpiDataValveNc_SR";
+  select ".text.Ach_Output_Process.Ach_SetWriteSpiDataValveNo_SR";
+  //select ".text.Ach_Output_Process.Ach_SetWriteSpiDataValveTcEsv_SR";
+  select ".text.Ach_Output_Process.Ach_ShlsDriveSetFunc_CS";
+  select ".text.Ach_Output_Process.Ach_VsoDriveSetFunc_CS";
+  select ".text.Ach_Output_Process.Ach_WachdogAnswerSetFunc_CS";
+  select ".text.Ach_Output_Process.Ach_WachdogSeedRequestFunc_CS";
+  select ".text.Ach_Output_Process.Ach_WldDriveSetFunc_CS";
+  select ".text.CRYRAMCODE*";
+  select ".text.TSMem.*";
+/*
+  select ".text.LatDynsCoorr_s16Inter3Point.LatDynsCoorr_s16Inter3Point";
+  select ".text.LatDynsCoorr_s16Inter4Point.LatDynsCoorr_s16Inter4Point";
+  select ".text.LatDynsCoorr_sCalLpf1stOrder.LatDynsCoorr_sCalLpf1stOrder";
+  select ".text.Wspc_Etcs_mul_s32_s32_s32_sat.mul_s32_s32_s32_sat";
+  select ".text.Wspc_Etcs_s16Inter3Point.LCETCS_s16Inter3Point";
+  select ".text.Wspc_Btcs_math.WSPC_s16Inter5Point";
+  select ".text.Wspc_Etcs_s16Inter5Point.LCETCS_s16Inter5Point";
+*/
+  }
+  /* Mando added PSPR area */
+ 
+#if 1  
+  /* Mando applied non-contiguous text area to fix ROM overflow problem. */
+  group __AREA_text (ordered, run_addr = [APP_START..APP_END])
+  {
+    group text.TRICORE (ordered, align=4)
+    {
+      //section "text.TRICORE" (blocksize=8, attributes=rx, fill=0)
+      //{
+      #if 1
+      select ".text*";
+      #endif
+      select ".mk_text.*";
+      select ".os_text.*";
+      select ".rdata.*";
+      //}
+    }
+  }
+#endif
+  
+  group __AREA_rodata (contiguous, ordered, run_addr = mem:user_appl4, align=8)
+  {
+    section "__AREA_rodata" (blocksize=8, attributes=r, fill=0)
+    {
+      select ".rodata*";
+    }
+  }
+  group __AREA_text_MK1 (contiguous, ordered, run_addr = mem:inttab_trap[0x20])
+  {
+    // Vector tables at start of ROM
+    group text.vectors1 (contiguous, ordered)
+    {
+      select "MK_inttable";  
+    }
+  }
+
+  // -----------------------------------------------------------
+  // The first memory region MK_Ram containing MK variables
+  // -----------------------------------------------------------
+
+  group AREA_Ram_All (contiguous, ordered, run_addr = mem:int_ram[0x0])
+  {
+    group (ordered, contiguous)
+    {
+        select ".bss.VX1000_AppDriver_TriCore.gVX1000";
+    }
+    group __AREA_mk_stack (contiguous, ordered)
+    {
+      group mk_stack_MK_kernStack (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_kernStack" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_kernStack";
+        }
+      }
+      "MK_RSA_MK_kernStack" := "_lc_gb_mk_stack_MK_kernStack";
+      "MK_RLA_MK_kernStack" := "_lc_ge_mk_stack_MK_kernStack";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_kernStack" (size=8); }
+    
+      group mk_stack_MK_idleStack (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_idleStack" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_idleStack";
+        }
+      }
+      "MK_RSA_MK_idleStack" := "_lc_gb_mk_stack_MK_idleStack";
+      "MK_RLA_MK_idleStack" := "_lc_ge_mk_stack_MK_idleStack";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_idleStack" (size=8); }
+    
+      group mk_stack_MK_osThreadLowStack (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_osThreadLowStack" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_osThreadLowStack";
+        }
+      }
+      "MK_RSA_MK_osThreadLowStack" := "_lc_gb_mk_stack_MK_osThreadLowStack";
+      "MK_RLA_MK_osThreadLowStack" := "_lc_ge_mk_stack_MK_osThreadLowStack";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_osThreadLowStack" (size=8); }
+    
+      group mk_stack_MK_initThreadStack (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_initThreadStack" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_initThreadStack";
+        }
+      }
+      "MK_RSA_MK_initThreadStack" := "_lc_gb_mk_stack_MK_initThreadStack";
+      "MK_RLA_MK_initThreadStack" := "_lc_ge_mk_stack_MK_initThreadStack";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_initThreadStack" (size=8); }
+    
+      group mk_stack_MK_osThreadHighStack (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_osThreadHighStack" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_osThreadHighStack";
+        }
+      }
+      "MK_RSA_MK_osThreadHighStack" := "_lc_gb_mk_stack_MK_osThreadHighStack";
+      "MK_RLA_MK_osThreadHighStack" := "_lc_ge_mk_stack_MK_osThreadHighStack";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_osThreadHighStack" (size=8); }
+    
+      group mk_stack_MK_protectionHookStack (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_protectionHookStack" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_protectionHookStack";
+        }
+      }
+      "MK_RSA_MK_protectionHookStack" := "_lc_gb_mk_stack_MK_protectionHookStack";
+      "MK_RLA_MK_protectionHookStack" := "_lc_ge_mk_stack_MK_protectionHookStack";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_protectionHookStack" (size=8); }
+    
+      group mk_stack_MK_errorHookStack (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_errorHookStack" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_errorHookStack";
+        }
+      }
+      "MK_RSA_MK_errorHookStack" := "_lc_gb_mk_stack_MK_errorHookStack";
+      "MK_RLA_MK_errorHookStack" := "_lc_ge_mk_stack_MK_errorHookStack";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_errorHookStack" (size=8); }
+    
+      group mk_stack_MK_tfThreadLowStack (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_tfThreadLowStack" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_tfThreadLowStack";
+        }
+      }
+      "MK_RSA_MK_tfThreadLowStack" := "_lc_gb_mk_stack_MK_tfThreadLowStack";
+      "MK_RLA_MK_tfThreadLowStack" := "_lc_ge_mk_stack_MK_tfThreadLowStack";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_tfThreadLowStack" (size=8); }
+    
+      group mk_stack_MK_tfThreadHighStack (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_tfThreadHighStack" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_tfThreadHighStack";
+        }
+      }
+      "MK_RSA_MK_tfThreadHighStack" := "_lc_gb_mk_stack_MK_tfThreadHighStack";
+      "MK_RLA_MK_tfThreadHighStack" := "_lc_ge_mk_stack_MK_tfThreadHighStack";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_tfThreadHighStack" (size=8); }
+    
+      group mk_stack_MK_selftestStack (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_selftestStack" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_selftestStack";
+        }
+      }
+      "MK_RSA_MK_selftestStack" := "_lc_gb_mk_stack_MK_selftestStack";
+      "MK_RLA_MK_selftestStack" := "_lc_ge_mk_stack_MK_selftestStack";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_selftestStack" (size=8); }
+    
+      group mk_stack_MK_threadStack_slot0 (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_threadStack_slot0" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_threadStack_slot0";
+        }
+      }
+      "MK_RSA_MK_threadStack_slot0" := "_lc_gb_mk_stack_MK_threadStack_slot0";
+      "MK_RLA_MK_threadStack_slot0" := "_lc_ge_mk_stack_MK_threadStack_slot0";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_threadStack_slot0" (size=8); }
+    
+      group mk_stack_MK_threadStack_slot1 (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_threadStack_slot1" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_threadStack_slot1";
+        }
+      }
+      "MK_RSA_MK_threadStack_slot1" := "_lc_gb_mk_stack_MK_threadStack_slot1";
+      "MK_RLA_MK_threadStack_slot1" := "_lc_ge_mk_stack_MK_threadStack_slot1";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_threadStack_slot1" (size=8); }
+    
+      group mk_stack_MK_threadStack_slot2 (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_threadStack_slot2" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_threadStack_slot2";
+        }
+      }
+      "MK_RSA_MK_threadStack_slot2" := "_lc_gb_mk_stack_MK_threadStack_slot2";
+      "MK_RLA_MK_threadStack_slot2" := "_lc_ge_mk_stack_MK_threadStack_slot2";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_threadStack_slot2" (size=8); }
+    
+      group mk_stack_MK_threadStack_slot3 (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_threadStack_slot3" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_threadStack_slot3";
+        }
+      }
+      "MK_RSA_MK_threadStack_slot3" := "_lc_gb_mk_stack_MK_threadStack_slot3";
+      "MK_RLA_MK_threadStack_slot3" := "_lc_ge_mk_stack_MK_threadStack_slot3";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_threadStack_slot3" (size=8); }
+    
+      group mk_stack_MK_threadStack_slot4 (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_threadStack_slot4" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_threadStack_slot4";
+        }
+      }
+      "MK_RSA_MK_threadStack_slot4" := "_lc_gb_mk_stack_MK_threadStack_slot4";
+      "MK_RLA_MK_threadStack_slot4" := "_lc_ge_mk_stack_MK_threadStack_slot4";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_threadStack_slot4" (size=8); }
+    
+      group mk_stack_MK_threadStack_slot5 (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_threadStack_slot5" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_threadStack_slot5";
+        }
+      }
+      "MK_RSA_MK_threadStack_slot5" := "_lc_gb_mk_stack_MK_threadStack_slot5";
+      "MK_RLA_MK_threadStack_slot5" := "_lc_ge_mk_stack_MK_threadStack_slot5";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_threadStack_slot5" (size=8); }
+    
+      group mk_stack_MK_threadStack_slot6 (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_threadStack_slot6" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_threadStack_slot6";
+        }
+      }
+      "MK_RSA_MK_threadStack_slot6" := "_lc_gb_mk_stack_MK_threadStack_slot6";
+      "MK_RLA_MK_threadStack_slot6" := "_lc_ge_mk_stack_MK_threadStack_slot6";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_threadStack_slot6" (size=8); }
+    
+      group mk_stack_MK_threadStack_slot7 (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_threadStack_slot7" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_threadStack_slot7";
+        }
+      }
+      "MK_RSA_MK_threadStack_slot7" := "_lc_gb_mk_stack_MK_threadStack_slot7";
+      "MK_RLA_MK_threadStack_slot7" := "_lc_ge_mk_stack_MK_threadStack_slot7";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_threadStack_slot7" (size=8); }
+    
+      group mk_stack_MK_threadStack_slot8 (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_threadStack_slot8" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_threadStack_slot8";
+        }
+      }
+      "MK_RSA_MK_threadStack_slot8" := "_lc_gb_mk_stack_MK_threadStack_slot8";
+      "MK_RLA_MK_threadStack_slot8" := "_lc_ge_mk_stack_MK_threadStack_slot8";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_threadStack_slot8" (size=8); }
+    
+      group mk_stack_MK_threadStack_slot9 (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_threadStack_slot9" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_threadStack_slot9";
+        }
+      }
+      "MK_RSA_MK_threadStack_slot9" := "_lc_gb_mk_stack_MK_threadStack_slot9";
+      "MK_RLA_MK_threadStack_slot9" := "_lc_ge_mk_stack_MK_threadStack_slot9";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_threadStack_slot9" (size=8); }
+    
+      group mk_stack_MK_threadStack_slot10 (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_threadStack_slot10" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_threadStack_slot10";
+        }
+      }
+      "MK_RSA_MK_threadStack_slot10" := "_lc_gb_mk_stack_MK_threadStack_slot10";
+      "MK_RLA_MK_threadStack_slot10" := "_lc_ge_mk_stack_MK_threadStack_slot10";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_threadStack_slot10" (size=8); }
+    
+      group mk_stack_MK_threadStack_slot11 (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_threadStack_slot11" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_threadStack_slot11";
+        }
+      }
+      "MK_RSA_MK_threadStack_slot11" := "_lc_gb_mk_stack_MK_threadStack_slot11";
+      "MK_RLA_MK_threadStack_slot11" := "_lc_ge_mk_stack_MK_threadStack_slot11";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_threadStack_slot11" (size=8); }
+    
+      group mk_stack_MK_threadStack_slot12 (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_threadStack_slot12" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_threadStack_slot12";
+        }
+      }
+      "MK_RSA_MK_threadStack_slot12" := "_lc_gb_mk_stack_MK_threadStack_slot12";
+      "MK_RLA_MK_threadStack_slot12" := "_lc_ge_mk_stack_MK_threadStack_slot12";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_threadStack_slot12" (size=8); }
+      
+      group mk_stack_MK_ShutdownHookStack (contiguous, ordered, align=64)
+      {
+        section "mk_stack_MK_ShutdownHookStack" (blocksize=8, attributes=rw)
+        {
+          select ".bss.mk_stack_MK_sysctrlHookStack";
+        }
+      }
+      "MK_RSA_MK_ShutdownHookStack" := "_lc_gb_mk_stack_MK_ShutdownHookStack";
+      "MK_RLA_MK_ShutdownHookStack" := "_lc_ge_mk_stack_MK_ShutdownHookStack";
+      "MK_RSA_MK_StartupHookStack"  := "_lc_gb_mk_stack_MK_ShutdownHookStack";
+      "MK_RLA_MK_StartupHookStack"  := "_lc_ge_mk_stack_MK_ShutdownHookStack";
+      group (align=8) { reserved "rsrvd.mk_stack_MK_ShutdownHookStack" (size=8); }
+    
+    }
+
+    group AREA_MK_Ram (contiguous, ordered, align=64)
+    {
+      section "MK_Ram" (blocksize=8, attributes=rw)
+      {
+          group MK_Ram_data (align=4)
+          {
+            select ".data.Mk_*";
+          }
+          group MK_Ram_bss (align=4)
+          {
+            select ".bss.Mk_*";
+          }
+      }
+    }
+    group AREA_MK_OsRam (contiguous, ordered, align=8) // Default : align=64
+    {
+      section "AREA_MK_OsRam" (blocksize=8, attributes=rw)
+      {
+        group MK_OsRam_data (align=4)
+        {
+          select ".data.kern-*";
+          select ".data.TRICORE-*";
+          select ".data.Os_*";
+        }
+        group MK_OsRam_bss (align=4)
+        {
+          select ".bss.kern-*";
+          select ".bss.TRICORE-*";
+          select ".bss.Os_*";
+        }
+      }
+    }
+    group __AREA_databss (contiguous, ordered)
+    {
+      group data.TRICORE (contiguous, ordered)  // Default : align=64
+      {
+        group DATA_SW_ASIL_QM(contiguous, ordered, align=4) {
+          group DATA_SW_ASIL_QM_RESERVED(contiguous, ordered, align=32) { 
+            reserved "mpu_reserved" (size=8);
+          }
+          group DATA_SW_ASIL_QM_RAW(contiguous, ordered, align=0) { 
+            select ".data.SW_ASIL_QM";
+            select ".zdata.SW_ASIL_QM";
+          }
+        }
+        group DATA_SW_ASIL_A_Pri(contiguous, ordered, align=4) {
+          group DATA_SW_ASIL_A_Pri_RESERVED(contiguous, ordered, align=32) {
+            reserved "mpu_reserved" (size=8);
+          }
+          group DATA_SW_ASIL_A_Pri_RAW(contiguous, ordered, align=0) {
+            select ".data.SW_ASIL_A_Pri";
+            select ".zdata.SW_ASIL_A_Pri";
+          }
+        }
+        group DATA_SW_ASIL_B_Pri(contiguous, ordered, align=4) {
+          group DATA_SW_ASIL_B_Pri_RESERVED(contiguous, ordered, align=32) {
+            reserved "mpu_reserved" (size=8);
+          }
+          group DATA_SW_ASIL_B_Pri_RAW(contiguous, ordered, align=0) {
+            select ".data.SW_ASIL_B_Pri";
+            select ".zdata.SW_ASIL_B_Pri";
+          }
+        }
+        group DATA_SW_ASIL_C_Pri(contiguous, ordered, align=4) {
+          group DATA_SW_ASIL_C_Pri_RESERVED(contiguous, ordered, align=32) {
+            reserved "mpu_reserved" (size=8);
+          }
+          group DATA_SW_ASIL_C_Pri_RAW(contiguous, ordered, align=0) {
+            select ".data.SW_ASIL_C_Pri";
+            select ".zdata.SW_ASIL_C_Pri";
+          }
+        }
+        group DATA_SW_ASIL_D_Pri(contiguous, ordered, align=4) {
+          group DATA_SW_ASIL_D_Pri_RESERVED(contiguous, ordered, align=32) {
+            reserved "mpu_reserved" (size=8);
+          }
+          group DATA_SW_ASIL_D_Pri_RAW(contiguous, ordered, align=0) {
+            group DATA_SW_ASIL_D_Pri_RAW_SUM_SSC(contiguous, ordered, align=4) {
+              select ".data.SUM_SSC*";
+            }
+            select ".data.SW_ASIL_D_Pri";
+            select ".zdata.SW_ASIL_D_Pri";
+          }
+        }
+        group DATA_SW_ASIL_Oem(contiguous, ordered, align=4) {
+          group DATA_SW_ASIL_Oem_RESERVED(contiguous, ordered, align=32) {
+            reserved "mpu_reserved" (size=8);
+          }
+          group DATA_SW_ASIL_Oem_RAW(contiguous, ordered, align=0) {
+            select ".data.SW_ASIL_Oem";        
+            select ".zdata.SW_ASIL_Oem";
+          }
+        }
+        group DATA_SW_SHARED(contiguous, ordered, align=4, priority=5) {
+          group DATA_SW_SHARED_RESERVED(contiguous, ordered, align=32) {
+            reserved "mpu_reserved" (size=8);
+          }
+          group DATA_SW_SHARED_RAW(contiguous, ordered, align=0) {
+            select ".data.SW_Shared_Area2";
+            group DATA_SW_SHARED_RAW_RTE(contiguous, ordered, align=4) {
+              select ".data.Cry_Hsm*";
+              select ".data.Hsm*";
+              select ".data.Csm*";
+              select ".data.Rte.Rte_Pim_SUM";
+            }
+            select ".data*";        
+            select ".zdata*";
+          }
+        }
+      }
+    
+      group bss.TRICORE (contiguous, ordered)  // Default : align=64
+      {
+        group BSS_SW_ASIL_QM(contiguous, ordered, align=0) {
+          group BSS_SW_ASIL_QM_RESERVED(contiguous, ordered, align=8) { 
+            select ".bss.SW_ASIL_QM_RESERVED";
+            select ".zbss.SW_ASIL_QM_RESERVED";
+          }
+          select ".bss.SW_ASIL_QM";
+          select ".zbss.SW_ASIL_QM";
+        }
+        group BSS_SW_ASIL_A_Pri(contiguous, ordered, align=0) {
+          group BSS_SW_ASIL_A_Pri_RESERVED(contiguous, ordered, align=8) {
+            select ".bss.SW_ASIL_A_Pri_RESERVED";
+            select ".zbss.SW_ASIL_A_Pri_RESERVED";
+          }
+          select ".bss.SW_ASIL_A_Pri";
+          select ".zbss.SW_ASIL_A_Pri";
+        }
+        group BSS_SW_ASIL_B_Pri(contiguous, ordered, align=0) {
+          group BSS_SW_ASIL_B_Pri_RESERVED(contiguous, ordered, align=8) {
+            select ".bss.SW_ASIL_B_Pri_RESERVED";
+            select ".zbss.SW_ASIL_B_Pri_RESERVED";
+          }
+          select ".bss.SW_ASIL_B_Pri";
+          select ".zbss.SW_ASIL_B_Pri";
+        }
+        group BSS_SW_ASIL_C_Pri(contiguous, ordered, align=0) {
+          group BSS_SW_ASIL_C_Pri_RESERVED(contiguous, ordered, align=8) {
+            select ".bss.SW_ASIL_C_Pri_RESERVED";
+            select ".zbss.SW_ASIL_C_Pri_RESERVED";
+          }
+          select ".bss.SW_ASIL_C_Pri";
+          select ".zbss.SW_ASIL_C_Pri";
+        }
+        group BSS_SW_ASIL_D_Pri(contiguous, ordered, align=0) {
+          group BSS_SW_ASIL_D_Pri_RESERVED(contiguous, ordered, align=8) {
+            select ".bss.SW_ASIL_D_Pri_RESERVED";
+            select ".zbss.SW_ASIL_D_Pri_RESERVED";
+          }
+          group BSS_SW_ASIL_D_Pri_SUM_SSC(contiguous, ordered, align=4) {
+            select ".bss.SUM_SSC*";
+          }
+          select ".bss.SW_ASIL_D_Pri";
+          select ".zbss.SW_ASIL_D_Pri";
+        }
+        group BSS_SW_ASIL_Oem(contiguous, ordered, align=0) {
+          group BSS_SW_ASIL_Oem_RESERVED(contiguous, ordered, align=8) {
+            select ".bss.SW_ASIL_Oem_RESERVED";
+            select ".zbss.SW_ASIL_Oem_RESERVED";
+          }
+          select ".bss.SW_ASIL_Oem";        
+          select ".zbss.SW_ASIL_Oem";
+        }
+        group BSS_SW_SHARED(contiguous, ordered, align=0, priority=5) {
+          group BSS_SW_SHARED_RESERVED(contiguous, ordered, align=8) {
+            select ".bss.SW_SHARED_RESERVED";
+            select ".zbss.SW_SHARED_RESERVED";
+          }
+          select ".bss.SW_Shared_Area2";
+          group BSS_SW_SHARED_RTE(contiguous, ordered, align=4) {
+            select ".bss.Cry_Hsm*";
+            select ".bss.Hsm*";
+            select ".bss.Csm*";
+            select ".bss.Rte.Rte_Pim_SUM*";
+          }
+          select ".bss*";        
+          select ".zbss*";
+        }
+      }
+    }
+  }
+  
+  group AREA_INIT_MK_Ram (contiguous, ordered, load_addr = mem:user_appl3, align=8)
+  {
+    group initdata_MK_Ram (contiguous, ordered, align=4)
+    {
+      select ".data.Mk_*";
+    }
+  }
+  group AREA_INIT_MK_OsRam (contiguous, ordered, load_addr = mem:user_appl3, align=8)
+  {
+    group initdata_MK_OsRam (contiguous, ordered, align=4)
+    {
+      select ".data.kern-*";
+      select ".data.TRICORE-*";
+      select ".data.Os_*";
+    }
+  }
+
+  group __AREA_initdata (contiguous, ordered, load_addr = mem:user_appl3, align=8)
+  {
+    group initdata.TRICORE (contiguous, ordered) // Default : align=64
+    {
+      group INITDATA_SW_ASIL_QM(contiguous, ordered, align=4) {
+        group INITDATA_SW_ASIL_QM_RESERVED(contiguous, ordered, align=32) { 
+          reserved "mpu_reserved" (size=8, attributes=r, fill=0x0);
+        }
+        group INITDATA_SW_ASIL_QM_RAW(contiguous, ordered, align=0) { 
+          select ".data.SW_ASIL_QM";
+          select ".zdata.SW_ASIL_QM";
+        }
+      }
+      group INITDATA_SW_ASIL_A_Pri(contiguous, ordered, align=4) {
+        group INITDATA_SW_ASIL_A_Pri_RESERVED(contiguous, ordered, align=32) {
+          reserved "mpu_reserved" (size=8, attributes=r, fill=0x0);
+        }
+        group INITDATA_SW_ASIL_A_Pri_RAW(contiguous, ordered, align=0) {
+          select ".data.SW_ASIL_A_Pri";
+          select ".zdata.SW_ASIL_A_Pri";
+        }
+      }
+      group INITDATA_SW_ASIL_B_Pri(contiguous, ordered, align=4) {
+        group INITDATA_SW_ASIL_B_Pri_RESERVED(contiguous, ordered, align=32) {
+          reserved "mpu_reserved" (size=8, attributes=r, fill=0x0);
+        }
+        group INITDATA_SW_ASIL_B_Pri_RAW(contiguous, ordered, align=0) {
+          select ".data.SW_ASIL_B_Pri";
+          select ".zdata.SW_ASIL_B_Pri";
+        }
+      }
+      group INITDATA_SW_ASIL_C_Pri(contiguous, ordered, align=4) {
+        group INITDATA_SW_ASIL_C_Pri_RESERVED(contiguous, ordered, align=32) {
+          reserved "mpu_reserved" (size=8, attributes=r, fill=0x0);
+        }
+        group INITDATA_SW_ASIL_C_Pri_RAW(contiguous, ordered, align=0) {
+          select ".data.SW_ASIL_C_Pri";
+          select ".zdata.SW_ASIL_C_Pri";
+        }
+      }
+      group INITDATA_SW_ASIL_D_Pri(contiguous, ordered, align=4) {
+        group INITDATA_SW_ASIL_D_Pri_RESERVED(contiguous, ordered, align=32) {
+          reserved "mpu_reserved" (size=8, attributes=r, fill=0x0);
+        }
+        group INITDATA_SW_ASIL_D_Pri_RAW(contiguous, ordered, align=0) {
+          group INITDATA_SW_ASIL_D_Pri_RAW_SUM_SSC(contiguous, ordered, align=4) {
+            select ".data.SUM_SSC*";
+          }
+          select ".data.SW_ASIL_D_Pri";
+          select ".zdata.SW_ASIL_D_Pri";
+        }
+      }
+      group INITDATA_SW_ASIL_Oem(contiguous, ordered, align=4) {
+        group INITDATA_SW_ASIL_Oem_RESERVED(contiguous, ordered, align=32) {
+          reserved "mpu_reserved" (size=8, attributes=r, fill=0x0);
+        }
+        group INITDATA_SW_ASIL_Oem_RAW(contiguous, ordered, align=0) {
+          select ".data.SW_ASIL_Oem";        
+          select ".zdata.SW_ASIL_Oem";
+        }
+      }
+      group INITDATA_SW_SHARED(contiguous, ordered, align=4, priority=5) {
+        group INITDATA_SW_SHARED_RESERVED(contiguous, ordered, align=32) {
+          reserved "mpu_reserved" (size=8, attributes=r, fill=0x0);
+        }
+        group INITDATA_SW_SHARED_RAW(contiguous, ordered, align=0) {
+          select ".data.SW_Shared_Area2";
+          group INITDATA_SW_SHARED_RAW_RTE(contiguous, ordered, align=4) {
+            select ".data.Cry_Hsm*";
+            select ".data.Hsm*";
+            select ".data.Csm*";
+            select ".data.Rte.Rte_Pim_SUM*";
+          }
+          select ".data*";        
+          select ".zdata*";
+        }
+      }
+    }
+  }
+
+  "INITDATA_SW_ASIL_QM_START" 		:= "_lc_gb_INITDATA_SW_ASIL_QM";
+  "INITDATA_SW_ASIL_QM_END" 		:= "_lc_ge_INITDATA_SW_ASIL_QM";
+  "INITDATA_SW_ASIL_A_PRI_START" 	:= "_lc_gb_INITDATA_SW_ASIL_A_Pri";
+  "INITDATA_SW_ASIL_A_PRI_END" 	        := "_lc_ge_INITDATA_SW_ASIL_A_Pri";
+  "INITDATA_SW_ASIL_B_PRI_START" 	:= "_lc_gb_INITDATA_SW_ASIL_B_Pri";
+  "INITDATA_SW_ASIL_B_PRI_END" 	        := "_lc_ge_INITDATA_SW_ASIL_B_Pri";
+  "INITDATA_SW_ASIL_C_PRI_START" 	:= "_lc_gb_INITDATA_SW_ASIL_C_Pri";
+  "INITDATA_SW_ASIL_C_PRI_END" 	        := "_lc_ge_INITDATA_SW_ASIL_C_Pri";
+  "INITDATA_SW_ASIL_D_PRI_START" 	:= "_lc_gb_INITDATA_SW_ASIL_D_Pri";
+  "INITDATA_SW_ASIL_D_PRI_END" 	        := "_lc_ge_INITDATA_SW_ASIL_D_Pri";
+  "INITDATA_SW_ASIL_OEM_START" 	        := "_lc_gb_INITDATA_SW_ASIL_Oem";
+  "INITDATA_SW_ASIL_OEM_END" 		:= "_lc_ge_INITDATA_SW_ASIL_Oem";
+  "INITDATA_SW_SHARED_START" 		:= "_lc_gb_INITDATA_SW_SHARED";
+  "INITDATA_SW_SHARED_END" 		:= "_lc_ge_INITDATA_SW_SHARED";
+  "INITDATA_SW_ASIL_QM_RAW_START" 		:= "_lc_gb_INITDATA_SW_ASIL_QM_RAW";
+  "INITDATA_SW_ASIL_A_PRI_RAW_START" 	:= "_lc_gb_INITDATA_SW_ASIL_A_Pri_RAW";
+  "INITDATA_SW_ASIL_B_PRI_RAW_START" 	:= "_lc_gb_INITDATA_SW_ASIL_B_Pri_RAW";
+  "INITDATA_SW_ASIL_C_PRI_RAW_START" 	:= "_lc_gb_INITDATA_SW_ASIL_C_Pri_RAW";
+  "INITDATA_SW_ASIL_D_PRI_RAW_START" 	:= "_lc_gb_INITDATA_SW_ASIL_D_Pri_RAW";
+  "INITDATA_SW_ASIL_OEM_RAW_START" 	    := "_lc_gb_INITDATA_SW_ASIL_Oem_RAW";
+  "INITDATA_SW_SHARED_RAW_START" 		:= "_lc_gb_INITDATA_SW_SHARED_RAW";
+  
+  "DATA_SW_ASIL_QM_START" 		:= "_lc_gb_DATA_SW_ASIL_QM";
+  "DATA_SW_ASIL_QM_END" 		:= "_lc_ge_DATA_SW_ASIL_QM";
+  "DATA_SW_ASIL_A_PRI_START" 	:= "_lc_gb_DATA_SW_ASIL_A_Pri";
+  "DATA_SW_ASIL_A_PRI_END" 		:= "_lc_ge_DATA_SW_ASIL_A_Pri";
+  "DATA_SW_ASIL_B_PRI_START" 	:= "_lc_gb_DATA_SW_ASIL_B_Pri";
+  "DATA_SW_ASIL_B_PRI_END" 		:= "_lc_ge_DATA_SW_ASIL_B_Pri";
+  "DATA_SW_ASIL_C_PRI_START" 	:= "_lc_gb_DATA_SW_ASIL_C_Pri";
+  "DATA_SW_ASIL_C_PRI_END" 		:= "_lc_ge_DATA_SW_ASIL_C_Pri";
+  "DATA_SW_ASIL_D_PRI_START" 	:= "_lc_gb_DATA_SW_ASIL_D_Pri";
+  "DATA_SW_ASIL_D_PRI_END" 		:= "_lc_ge_DATA_SW_ASIL_D_Pri";
+  "DATA_SW_ASIL_OEM_START" 		:= "_lc_gb_DATA_SW_ASIL_Oem";
+  "DATA_SW_ASIL_OEM_END" 		:= "_lc_ge_DATA_SW_ASIL_Oem";
+  "DATA_SW_SHARED_START" 		:= "_lc_gb_DATA_SW_SHARED";
+  "DATA_SW_SHARED_END" 			:= "_lc_ge_DATA_SW_SHARED";
+  "DATA_SW_ASIL_QM_RAW_START" 		:= "_lc_gb_DATA_SW_ASIL_QM_RAW";
+  "DATA_SW_ASIL_A_PRI_RAW_START" 	:= "_lc_gb_DATA_SW_ASIL_A_Pri_RAW";
+  "DATA_SW_ASIL_B_PRI_RAW_START" 	:= "_lc_gb_DATA_SW_ASIL_B_Pri_RAW";
+  "DATA_SW_ASIL_C_PRI_RAW_START" 	:= "_lc_gb_DATA_SW_ASIL_C_Pri_RAW";
+  "DATA_SW_ASIL_D_PRI_RAW_START" 	:= "_lc_gb_DATA_SW_ASIL_D_Pri_RAW";
+  "DATA_SW_ASIL_OEM_RAW_START" 	    := "_lc_gb_DATA_SW_ASIL_Oem_RAW";
+  "DATA_SW_SHARED_RAW_START" 		:= "_lc_gb_DATA_SW_SHARED_RAW";
+  
+  "BSS_SW_ASIL_QM_START" 		:= "_lc_gb_BSS_SW_ASIL_QM";
+  "BSS_SW_ASIL_QM_END" 			:= "_lc_ge_BSS_SW_ASIL_QM";
+  "BSS_SW_ASIL_A_PRI_START" 	:= "_lc_gb_BSS_SW_ASIL_A_Pri";
+  "BSS_SW_ASIL_A_PRI_END" 		:= "_lc_ge_BSS_SW_ASIL_A_Pri";
+  "BSS_SW_ASIL_B_PRI_START" 	:= "_lc_gb_BSS_SW_ASIL_B_Pri";
+  "BSS_SW_ASIL_B_PRI_END" 		:= "_lc_ge_BSS_SW_ASIL_B_Pri";
+  "BSS_SW_ASIL_C_PRI_START" 	:= "_lc_gb_BSS_SW_ASIL_C_Pri";
+  "BSS_SW_ASIL_C_PRI_END" 		:= "_lc_ge_BSS_SW_ASIL_C_Pri";
+  "BSS_SW_ASIL_D_PRI_START" 	:= "_lc_gb_BSS_SW_ASIL_D_Pri";
+  "BSS_SW_ASIL_D_PRI_END" 		:= "_lc_ge_BSS_SW_ASIL_D_Pri";
+  "BSS_SW_ASIL_OEM_START" 		:= "_lc_gb_BSS_SW_ASIL_Oem";
+  "BSS_SW_ASIL_OEM_END" 		:= "_lc_ge_BSS_SW_ASIL_Oem";
+  "BSS_SW_SHARED_START" 		:= "_lc_gb_BSS_SW_SHARED";
+  "BSS_SW_SHARED_END" 			:= "_lc_ge_BSS_SW_SHARED";
+
+  // Symbols of memory regions not bound to any object file
+  "MK_RSA_MK_Rom"    := 0x80000000; // Flash
+  "MK_RLA_MK_Rom"    := 0x80400000;
+  "MK_RSA_MK_Io"     := 0xF0000000; // I/O
+  "MK_RLA_MK_Io"     := 0xFF120000;
+  "MK_RSA_MK_ReadOnlyRam" := 0xd0000000; // whole RAM
+  "MK_RLA_MK_ReadOnlyRam" := 0xd0020000;
+  "MK_RSA_MK_GlobalRam" := 0xd0000000;
+  "MK_RLA_MK_GlobalRam" := "MK_RSA_MK_Csa";
+  "MK_RSA_MK_OsIo"   := 0xF0000000; // OS I/O (STM only!!!)
+  "MK_RLA_MK_OsIo"   := 0xF0000300;
+
+  "MK_RSA_MK_Ram"    := "_lc_gb_AREA_MK_Ram";
+  "MK_RLA_MK_Ram"    := "_lc_ge_AREA_MK_Ram";
+  "MK_RDA_MK_Ram"    := "_lc_gb_AREA_INIT_MK_Ram";
+  "MK_BSA_MK_Ram"    := "_lc_gb_MK_Ram_bss";
+
+  "MK_RSA_MK_OsRam"  := "_lc_gb_AREA_MK_OsRam";
+  "MK_RLA_MK_OsRam"  := "_lc_ge_AREA_MK_OsRam";
+  "MK_RDA_MK_OsRam"  := "_lc_gb_AREA_INIT_MK_OsRam";
+  "MK_BSA_MK_OsRam"  := "_lc_gb_MK_OsRam_bss";
+
+  // Symbols for the global initialisation.
+  "MK_ANON_IDAT"     := "_lc_gb_initdata.TRICORE";
+  "MK_ANON_DATA"     := "_lc_gb_data.TRICORE";
+  "MK_ANON_DATA_END" := "_lc_ge_data.TRICORE";
+  "MK_ANON_BSS"      := "_lc_gb_bss.TRICORE";
+  "MK_ANON_BSS_END"  := "_lc_ge_bss.TRICORE";
+
+  // Symbols for the PSPR0 global initialisation
+  "MK_ANON_PSPR0_ROM"    := "_lc_gb_AREA_MK_Rom_PSPR";
+  "MK_ANON_PSPR0"    := "_lc_gb_AREA_MK_Ram_PSPR";
+  "MK_ANON_PSPR0_END" := "_lc_ge_AREA_MK_Ram_PSPR";
+
+  // Symbols for the initialisation of private data areas.
+  "MK_INITIAL_A0"       := 0;
+  "MK_INITIAL_A1"       := 0;
+  "MK_INITIAL_A8"       := 0; // reserved for OS use
+
+
+  // Symbols for the initialisation of private data areas.
+  // Empty private Data of task Init_Task
+  "MK_RDA_Init_Task" := 0;
+  "MK_RSA_Init_Task" := 100;
+  "MK_BSA_Init_Task" := 100;
+  "MK_RLA_Init_Task" := 100;
+
+  // Empty private Data of task SchMBswTask
+  "MK_RDA_SchMBswTask" := 0;
+  "MK_RSA_SchMBswTask" := 100;
+  "MK_BSA_SchMBswTask" := 100;
+  "MK_RLA_SchMBswTask" := 100;
+
+  // Empty private Data of task Appl_Task_1ms
+  "MK_RDA_Appl_Task_1ms" := 0;
+  "MK_RSA_Appl_Task_1ms" := 100;
+  "MK_BSA_Appl_Task_1ms" := 100;
+  "MK_RLA_Appl_Task_1ms" := 100;
+
+  // Empty private Data of task Appl_Task_5ms
+  "MK_RDA_Appl_Task_5ms" := 0;
+  "MK_RSA_Appl_Task_5ms" := 100;
+  "MK_BSA_Appl_Task_5ms" := 100;
+  "MK_RLA_Appl_Task_5ms" := 100;
+
+  // Empty private Data of task SchMComTask
+  "MK_RDA_SchMComTask" := 0;
+  "MK_RSA_SchMComTask" := 100;
+  "MK_BSA_SchMComTask" := 100;
+  "MK_RLA_SchMComTask" := 100;
+
+  // Empty private Data of task Appl_Task_5ms_Entry
+  "MK_RDA_Appl_Task_5ms_Entry" := 0;
+  "MK_RSA_Appl_Task_5ms_Entry" := 100;
+  "MK_BSA_Appl_Task_5ms_Entry" := 100;
+  "MK_RLA_Appl_Task_5ms_Entry" := 100;
+
+  // Empty private Data of task Rte_EVENT_TASK
+  "MK_RDA_Rte_Event_Task" := 0;
+  "MK_RSA_Rte_Event_Task" := 100;
+  "MK_BSA_Rte_Event_Task" := 100;
+  "MK_RLA_Rte_Event_Task" := 100;
+
+  // Empty private Data of task Rte_EVENT_Ack_TASK
+  "MK_RDA_Rte_Event_Ack_Task" := 0;
+  "MK_RSA_Rte_Event_Ack_Task" := 100;
+  "MK_BSA_Rte_Event_Ack_Task" := 100;
+  "MK_RLA_Rte_Event_Ack_Task" := 100;
+
+  // Empty private Data of ISR GTMTOM0SR1_ISR
+  "MK_RDA_GTMTOM0SR1_ISR" := 0;
+  "MK_RSA_GTMTOM0SR1_ISR" := 100;
+  "MK_BSA_GTMTOM0SR1_ISR" := 100;
+  "MK_RLA_GTMTOM0SR1_ISR" := 100;
+
+  // Empty private Data of ISR CANSR6_ISR
+  "MK_RDA_CANSR6_ISR" := 0;
+  "MK_RSA_CANSR6_ISR" := 100;
+  "MK_BSA_CANSR6_ISR" := 100;
+  "MK_RLA_CANSR6_ISR" := 100;
+
+  // Empty private Data of ISR CANSR5_ISR
+  "MK_RDA_CANSR5_ISR" := 0;
+  "MK_RSA_CANSR5_ISR" := 100;
+  "MK_BSA_CANSR5_ISR" := 100;
+  "MK_RLA_CANSR5_ISR" := 100;
+
+  // Empty private Data of ISR CANSR3_ISR
+  "MK_RDA_CANSR3_ISR" := 0;
+  "MK_RSA_CANSR3_ISR" := 100;
+  "MK_BSA_CANSR3_ISR" := 100;
+  "MK_RLA_CANSR3_ISR" := 100;
+
+  // Empty private Data of ISR CANSR20_ISR
+  "MK_RDA_CANSR20_ISR" := 0;
+  "MK_RSA_CANSR20_ISR" := 100;
+  "MK_BSA_CANSR20_ISR" := 100;
+  "MK_RLA_CANSR20_ISR" := 100;
+
+  // Empty private Data of ISR CANSR22_ISR
+  "MK_RDA_CANSR22_ISR" := 0;
+  "MK_RSA_CANSR22_ISR" := 100;
+  "MK_BSA_CANSR22_ISR" := 100;
+  "MK_RLA_CANSR22_ISR" := 100;
+
+  // Empty private Data of ISR CANSR0_ISR
+  "MK_RDA_CANSR0_ISR" := 0;
+  "MK_RSA_CANSR0_ISR" := 100;
+  "MK_BSA_CANSR0_ISR" := 100;
+  "MK_RLA_CANSR0_ISR" := 100;
+
+  // Empty private Data of ISR CANSR2_ISR
+  "MK_RDA_CANSR2_ISR" := 0;
+  "MK_RSA_CANSR2_ISR" := 100;
+  "MK_BSA_CANSR2_ISR" := 100;
+  "MK_RLA_CANSR2_ISR" := 100;
+
+  // Empty private Data of ISR CANSR17_ISR
+  "MK_RDA_CANSR17_ISR" := 0;
+  "MK_RSA_CANSR17_ISR" := 100;
+  "MK_BSA_CANSR17_ISR" := 100;
+  "MK_RLA_CANSR17_ISR" := 100;
+
+  // Empty private Data of ISR CANSR16_ISR
+  "MK_RDA_CANSR16_ISR" := 0;
+  "MK_RSA_CANSR16_ISR" := 100;
+  "MK_BSA_CANSR16_ISR" := 100;
+  "MK_RLA_CANSR16_ISR" := 100;
+
+  // Empty private Data of ISR CANSR19_ISR
+  "MK_RDA_CANSR19_ISR" := 0;
+  "MK_RSA_CANSR19_ISR" := 100;
+  "MK_BSA_CANSR19_ISR" := 100;
+  "MK_RLA_CANSR19_ISR" := 100;
+
+}
